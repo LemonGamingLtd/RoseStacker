@@ -29,24 +29,7 @@ import dev.rosewood.rosestacker.utils.EntityUtils;
 import dev.rosewood.rosestacker.utils.ItemUtils;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
 import dev.rosewood.rosestacker.utils.VersionUtils;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -65,6 +48,23 @@ import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class StackingThread implements StackingLogic, AutoCloseable {
 
@@ -198,7 +198,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
             return;
 
         if (!stackedEntity.shouldStayStacked()) {
-            ThreadUtils.runSync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), () -> {
                 if (stackedEntity.getStackSize() > 1)
                     this.splitEntityStack(stackedEntity);
             });
@@ -212,7 +212,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
         NMSHandler nmsHandler = NMSAdapter.getHandler();
         StackedEntityDataStorage nbt = stackedEntity.getDataStorage();
         stackedEntity.setDataStorage(nmsHandler.createEntityDataStorage(entity, this.stackManager.getEntityDataStorageType(entity.getType())));
-        ThreadUtils.runSync(() -> {
+        this.rosePlugin.getScheduler().runTaskAtLocation(stackedEntity.getLocation(), () -> {
             for (EntityDataEntry entityDataEntry : nbt.getAll())
                 entityDataEntry.createEntity(stackedEntity.getLocation(), true, entity.getType());
         });
@@ -702,7 +702,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
         if (world == null)
             return;
 
-        ThreadUtils.runAsync(() -> {
+        this.rosePlugin.getScheduler().runTaskAsync(() -> {
             EntityStackSettings stackSettings = this.rosePlugin.getManager(StackSettingManager.class).getEntityStackSettings(entityType);
             NMSHandler nmsHandler = NMSAdapter.getHandler();
             boolean removeAi = stackSettings.isMobAIDisabled();
@@ -753,7 +753,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
 
             updatedEntities.forEach(StackedEntity::updateDisplay);
 
-            ThreadUtils.runSync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtLocation(location, () -> {
                 this.stackManager.setEntityStackingTemporarilyDisabled(true);
                 for (StackedEntity stackedEntity : newStackedEntities) {
                     LivingEntity entity = stackedEntity.getEntity();
@@ -890,7 +890,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
 
         if (!stackedSpawners.isEmpty() || !stackedBlocks.isEmpty()) {
             this.stackChunkData.put(chunk, new StackChunkData(stackedSpawners, stackedBlocks));
-            ThreadUtils.runAsync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtLocation(chunk.getBlock(0, 0, 0).getLocation(), () -> {
                 stackedSpawners.values().forEach(StackedSpawner::updateDisplay);
                 stackedBlocks.values().forEach(StackedBlock::updateDisplay);
             });
@@ -936,10 +936,12 @@ public class StackingThread implements StackingLogic, AutoCloseable {
         }
 
         if (!stackedEntities.isEmpty() || !stackedItems.isEmpty()) {
-            ThreadUtils.runAsync(() -> {
-                stackedEntities.forEach(StackedEntity::updateDisplay);
-                stackedItems.forEach(StackedItem::updateDisplay);
-            });
+            for (final StackedEntity stackedEntity : stackedEntities) {
+                this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), stackedEntity::updateDisplay);
+            }
+            for (final StackedItem stackedItem : stackedItems) {
+                this.rosePlugin.getScheduler().runTaskAtEntity(stackedItem.getItem(), stackedItem::updateDisplay);
+            }
         }
     }
 
@@ -1132,7 +1134,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
             this.removeEntityStack(toStack);
         }
 
-        ThreadUtils.runOnPrimary(() -> removable.stream().map(StackedEntity::getEntity).forEach(Entity::remove));
+        removable.stream().map(StackedEntity::getEntity).forEach(livingEntity -> this.rosePlugin.getScheduler().runTaskAtEntity(livingEntity, livingEntity::remove));
     }
 
     @Override
@@ -1205,7 +1207,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
             increased.getItem().setPickupDelay(Math.max(increased.getItem().getPickupDelay(), removed.getItem().getPickupDelay()));
             removed.getItem().setPickupDelay(100); // Don't allow the item we just merged to get picked up or stacked
 
-            ThreadUtils.runOnPrimary(() -> removed.getItem().remove());
+            this.rosePlugin.getScheduler().runTaskAtEntity(removed.getItem(), removed.getItem()::remove);
             this.removeItemStack(removed);
         }
 

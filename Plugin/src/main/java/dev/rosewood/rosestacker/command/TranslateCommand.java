@@ -11,12 +11,12 @@ import dev.rosewood.rosegarden.config.CommentedFileConfiguration;
 import dev.rosewood.rosestacker.command.argument.StackerArgumentHandlers;
 import dev.rosewood.rosestacker.manager.LocaleManager;
 import dev.rosewood.rosestacker.manager.StackSettingManager;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
+import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
+
 import java.io.File;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
 
 public class TranslateCommand extends BaseRoseCommand {
 
@@ -99,7 +99,7 @@ public class TranslateCommand extends BaseRoseCommand {
             itemStackConfig.save(itemSettingsFile, true);
             spawnerStackConfig.save(spawnerSettingsFile, true);
 
-            ThreadUtils.runSync(() -> {
+            this.rosePlugin.getScheduler().runTask(() -> {
                 this.rosePlugin.reload();
                 localeManager.sendCommandMessage(context.getSender(), "command-translate-success");
             });

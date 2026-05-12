@@ -14,11 +14,7 @@ import dev.rosewood.rosestacker.utils.EntityUtils;
 import dev.rosewood.rosestacker.utils.ItemUtils;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
 import dev.rosewood.rosestacker.utils.VersionUtils;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
@@ -38,6 +34,10 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class StackToolListener implements Listener {
 
@@ -87,7 +87,7 @@ public class StackToolListener implements Listener {
             localeManager.sendCommandMessage(player, "command-stacktool-marked-" + stackableStr, StringPlaceholders.of("type", stackedEntity.getStackSettings().getDisplayName()));
         } else {
             PersistentDataUtils.setUnstackable(entity, true);
-            ThreadUtils.runAsync(() -> stackedEntity.getDataStorage().forEachTransforming(x -> {
+            this.rosePlugin.getScheduler().runTaskAsync(() -> stackedEntity.getDataStorage().forEachTransforming(x -> {
                 PersistentDataUtils.setUnstackable(x, true);
                 return true;
             }));

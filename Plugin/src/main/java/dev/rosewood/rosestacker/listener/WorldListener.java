@@ -5,8 +5,6 @@ import dev.rosewood.rosegarden.utils.NMSUtil;
 import dev.rosewood.rosestacker.manager.StackManager;
 import dev.rosewood.rosestacker.stack.StackingThread;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.Arrays;
 import org.bukkit.Chunk;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
@@ -20,11 +18,15 @@ import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 
+import java.util.Arrays;
+
 public class WorldListener implements Listener {
 
+    private final RosePlugin rosePlugin;
     private final StackManager stackManager;
 
     public WorldListener(RosePlugin rosePlugin) {
+        this.rosePlugin = rosePlugin;
         this.stackManager = rosePlugin.getManager(StackManager.class);
     }
 
@@ -88,7 +90,7 @@ public class WorldListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         StackingThread stackingThread = this.stackManager.getStackingThread(event.getPlayer().getWorld());
         if (stackingThread != null)
-            ThreadUtils.runAsync(stackingThread::processNametags);
+            this.rosePlugin.getScheduler().runTaskAsync(stackingThread::processNametags);
     }
 
 }

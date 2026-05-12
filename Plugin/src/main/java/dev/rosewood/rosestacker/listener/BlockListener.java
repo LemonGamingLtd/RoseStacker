@@ -16,16 +16,11 @@ import dev.rosewood.rosestacker.manager.StackManager;
 import dev.rosewood.rosestacker.manager.StackSettingManager;
 import dev.rosewood.rosestacker.nms.spawner.SpawnerType;
 import dev.rosewood.rosestacker.stack.StackedBlock;
-import dev.rosewood.rosestacker.stack.StackedEntity;
 import dev.rosewood.rosestacker.stack.StackedSpawner;
 import dev.rosewood.rosestacker.stack.settings.BlockStackSettings;
 import dev.rosewood.rosestacker.stack.settings.SpawnerStackSettings;
 import dev.rosewood.rosestacker.utils.ItemUtils;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.ExplosionResult;
 import org.bukkit.GameMode;
@@ -60,6 +55,10 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class BlockListener implements Listener {
 
@@ -445,7 +444,7 @@ public class BlockListener implements Listener {
                     continue;
 
                 int finalDestroyAmount = destroyAmount;
-                ThreadUtils.runSync(() -> { // Delay a tick so the items aren't destroyed by the explosion
+                this.rosePlugin.getScheduler().runTaskAtLocationLater(block.getLocation(), () -> { // Delay a tick so the items aren't destroyed by the explosion
                     Location dropLocation = StackerUtils.adjustBlockLocation(block.getLocation());
                     if (SettingKey.BLOCK_BREAK_ENTIRE_STACK_INTO_SEPARATE.get()) {
                         ItemStack blockItem = new ItemStack(type, 1);
@@ -453,7 +452,7 @@ public class BlockListener implements Listener {
                     } else {
                         this.stackManager.preStackItems(List.of(ItemUtils.getBlockAsStackedItemStack(type, finalDestroyAmount)), dropLocation);
                     }
-                });
+                }, 1L);
             } else if (stackedSpawner != null) {
                 blockList.remove(block);
 
@@ -503,7 +502,7 @@ public class BlockListener implements Listener {
                     continue;
 
                 int finalDestroyAmount = destroyAmount;
-                ThreadUtils.runSync(() -> { // Delay a tick so the items aren't destroyed by the explosion
+                this.rosePlugin.getScheduler().runTaskAtLocationLater(block.getLocation(), () -> { // Delay a tick so the items aren't destroyed by the explosion
                     Location dropLocation = StackerUtils.adjustBlockLocation(block.getLocation());
                     if (SettingKey.SPAWNER_BREAK_ENTIRE_STACK_INTO_SEPARATE.get()) {
                         ItemStack spawnerItem = ItemUtils.getSpawnerAsStackedItemStack(spawnerType, 1);
@@ -511,7 +510,7 @@ public class BlockListener implements Listener {
                     } else {
                         this.stackManager.preStackItems(List.of(ItemUtils.getSpawnerAsStackedItemStack(spawnerType, finalDestroyAmount)), dropLocation);
                     }
-                });
+                }, 1L);
             }
         }
     }

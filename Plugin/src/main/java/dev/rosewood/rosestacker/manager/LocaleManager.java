@@ -10,7 +10,10 @@ import dev.rosewood.rosegarden.utils.HexUtils;
 import dev.rosewood.rosegarden.utils.StringPlaceholders;
 import dev.rosewood.rosestacker.manager.LocaleManager.TranslationResponse.Result;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
+import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -25,9 +28,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
-import org.jetbrains.annotations.NotNull;
 
 public class LocaleManager extends AbstractLocaleManager {
 
@@ -74,7 +74,7 @@ public class LocaleManager extends AbstractLocaleManager {
     }
 
     public void fetchMinecraftTranslationLocales() {
-        ThreadUtils.runAsync(() -> {
+        this.rosePlugin.getScheduler().runTaskAsync(() -> {
             List<String> locales = new ArrayList<>();
             String queryLink = "https://api.github.com/repos/InventivetalentDev/minecraft-assets/contents/assets/minecraft/lang?ref=" + StackerUtils.MAX_SUPPORTED_LOCALE_VERSION;
 
@@ -101,7 +101,7 @@ public class LocaleManager extends AbstractLocaleManager {
     }
 
     public void getMinecraftTranslationValues(String locale, Consumer<TranslationResponse> callback) {
-        ThreadUtils.runAsync(() -> {
+        this.rosePlugin.getScheduler().runTaskAsync(() -> {
             Map<Material, String> materialValues = new EnumMap<>(Material.class);
             Map<EntityType, String> entityValues = new EnumMap<>(EntityType.class);
 

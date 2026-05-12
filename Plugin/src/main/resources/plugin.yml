@@ -5,6 +5,7 @@ website: https://www.spigotmc.org/resources/82729/
 main: dev.rosewood.rosestacker.RoseStacker
 api-version: '1.13'
 loadbefore: [ShopGUIPlus]
+folia-supported: true
 softdepend:
   - Boss
   - Citizens

@@ -15,15 +15,15 @@ import dev.rosewood.rosestacker.stack.settings.SpawnerStackSettings;
 import dev.rosewood.rosestacker.stack.settings.conditions.spawner.ConditionTag;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.ArrayList;
-import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class StackedSpawner extends Stack<SpawnerStackSettings> {
 
@@ -50,9 +50,11 @@ public class StackedSpawner extends Stack<SpawnerStackSettings> {
         this.spawnerTile = NMSAdapter.getHandler().injectStackedSpawnerTile(this);
         this.stackSettings = RoseStacker.getInstance().getManager(StackSettingManager.class).getSpawnerStackSettings(this.spawnerTile.getSpawnerType());
 
-        ThreadUtils.runOnPrimary(() -> this.updateSpawnerProperties(true));
-        if (updateDisplay)
-            this.updateDisplay();
+        RoseStacker.getInstance().getScheduler().runTaskAtLocation(this.block.getLocation(), () -> {
+            this.updateSpawnerProperties(true);
+            if (updateDisplay)
+                this.updateDisplay();
+        });
     }
 
     public StackedSpawner(int size, Block spawner, boolean placedByPlayer) {

@@ -10,7 +10,6 @@ import dev.rosewood.rosestacker.manager.LocaleManager;
 import dev.rosewood.rosestacker.manager.StackManager;
 import dev.rosewood.rosestacker.stack.Stack;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
 
 public class StatsCommand extends BaseRoseCommand {
 
@@ -45,7 +44,7 @@ public class StatsCommand extends BaseRoseCommand {
         localeManager.sendSimpleCommandMessage(context.getSender(), "command-stats-stacked-items", StringPlaceholders.of("stackAmount", StackerUtils.formatNumber(itemStackAmount), "total", StackerUtils.formatNumber(itemAmount)));
         localeManager.sendSimpleCommandMessage(context.getSender(), "command-stats-stacked-blocks", StringPlaceholders.of("stackAmount", StackerUtils.formatNumber(blockStackAmount), "total", StackerUtils.formatNumber(blockAmount)));
         localeManager.sendSimpleCommandMessage(context.getSender(), "command-stats-stacked-spawners", StringPlaceholders.of("stackAmount", StackerUtils.formatNumber(spawnerStackAmount), "total", StackerUtils.formatNumber(spawnerAmount)));
-        localeManager.sendSimpleCommandMessage(context.getSender(), "command-stats-active-tasks", StringPlaceholders.of("amount", StackerUtils.formatNumber(ThreadUtils.getActiveThreads())));
+        localeManager.sendSimpleCommandMessage(context.getSender(), "command-stats-active-tasks", StringPlaceholders.of("amount", StackerUtils.formatNumber(this.rosePlugin.getScheduler().getRunningTaskCount())));
     }
 
     @Override

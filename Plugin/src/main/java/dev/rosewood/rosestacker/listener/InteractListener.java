@@ -10,7 +10,6 @@ import dev.rosewood.rosestacker.stack.StackedEntity;
 import dev.rosewood.rosestacker.stack.StackedSpawner;
 import dev.rosewood.rosestacker.stack.settings.EntityStackSettings;
 import dev.rosewood.rosestacker.utils.ItemUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
 import dev.rosewood.rosestacker.utils.VersionUtils;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -170,13 +169,13 @@ public class InteractListener implements Listener {
         Player player = event.getPlayer();
         ItemStack itemStack = event.getHand() == EquipmentSlot.HAND ? player.getInventory().getItemInMainHand() : player.getInventory().getItemInOffHand();
         if (itemStack.getType() == Material.NAME_TAG) {
-            ThreadUtils.runSync(stackedEntity::updateDisplay);
+            this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), stackedEntity::updateDisplay);
             return;
         } else if (itemStack.getType() == Material.WATER_BUCKET) {
             switch (entity.getType()) {
                 case COD, SALMON, PUFFERFISH, TROPICAL_FISH, AXOLOTL, TADPOLE -> {
                     if (stackedEntity.getStackSize() != 1)
-                        ThreadUtils.runSync(stackedEntity::decreaseStackSize);
+                        this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), stackedEntity::decreaseStackSize);
                 }
             }
             return;
@@ -200,7 +199,7 @@ public class InteractListener implements Listener {
 
         if (this.spawnEntities(null, spawnLocation, itemStack)) {
             Inventory inventory = ((Container) block.getState()).getInventory();
-            ThreadUtils.runSync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtLocation(spawnLocation, () -> {
                 for (int slot = 0; slot < inventory.getSize(); slot++) {
                     ItemStack item = inventory.getItem(slot);
                     if (item == null || !item.isSimilar(itemStack))

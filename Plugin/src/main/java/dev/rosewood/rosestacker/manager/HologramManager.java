@@ -7,11 +7,6 @@ import dev.rosewood.rosestacker.config.SettingKey;
 import dev.rosewood.rosestacker.nms.NMSAdapter;
 import dev.rosewood.rosestacker.nms.NMSHandler;
 import dev.rosewood.rosestacker.nms.hologram.Hologram;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -21,6 +16,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HologramManager extends Manager implements Listener {
 
@@ -80,7 +80,7 @@ public class HologramManager extends Manager implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        ThreadUtils.runAsync(() -> {
+        this.rosePlugin.getScheduler().runTaskAsync(() -> {
             Player player = event.getPlayer();
             for (Hologram hologram : this.holograms.values())
                 this.updateWatcher(player, hologram);
@@ -89,7 +89,7 @@ public class HologramManager extends Manager implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        ThreadUtils.runAsync(() -> {
+        this.rosePlugin.getScheduler().runTaskAsync(() -> {
             Player player = event.getPlayer();
             for (Hologram hologram : this.holograms.values())
                 hologram.removeWatcher(player);

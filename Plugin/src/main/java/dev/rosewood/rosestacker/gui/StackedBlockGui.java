@@ -23,10 +23,6 @@ import dev.rosewood.rosestacker.manager.StackManager;
 import dev.rosewood.rosestacker.stack.StackedBlock;
 import dev.rosewood.rosestacker.stack.settings.BlockStackSettings;
 import dev.rosewood.rosestacker.utils.ItemUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -35,6 +31,10 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public class StackedBlockGui {
 
@@ -294,7 +294,7 @@ public class StackedBlockGui {
             return;
 
         StackManager stackManager = this.rosePlugin.getManager(StackManager.class);
-        ThreadUtils.runSync(() -> {
+        this.rosePlugin.getScheduler().runTaskAtLocation(this.stackedBlock.getLocation(), () -> {
             BlockUnstackEvent blockUnstackEvent = new BlockUnstackEvent(player, this.stackedBlock, this.stackedBlock.getStackSize());
             Bukkit.getPluginManager().callEvent(blockUnstackEvent);
             if (blockUnstackEvent.isCancelled())

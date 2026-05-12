@@ -9,7 +9,6 @@ import dev.rosewood.rosestacker.stack.StackedEntity;
 import dev.rosewood.rosestacker.stack.settings.EntityStackSettings;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
 import io.papermc.paper.entity.CollarColorable;
 import org.bukkit.Bukkit;
 import org.bukkit.EntityEffect;
@@ -104,7 +103,7 @@ public class BreedingListener implements Listener {
 
         boolean disableAi = PersistentDataUtils.isAiDisabled(animal);
         // Drop experience and spawn entities a few ticks later
-        ThreadUtils.runSyncDelayed(() -> {
+        this.rosePlugin.getScheduler().runTaskAtLocationLater(animal.getLocation(), () -> {
             ItemStack breedingItemCopy = breedingItem.clone();
             breedingItemCopy.setAmount(1);
             boolean callEvents = SettingKey.ENTITY_CUMULATIVE_BREEDING_TRIGGER_BREED_EVENT.get();

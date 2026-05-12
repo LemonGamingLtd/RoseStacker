@@ -29,12 +29,6 @@ import dev.rosewood.rosestacker.utils.EntityUtils;
 import dev.rosewood.rosestacker.utils.ItemUtils;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -60,6 +54,12 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Supplier;
 
 
 public class StackedEntity extends Stack<EntityStackSettings> implements Comparable<StackedEntity> {
@@ -138,11 +138,7 @@ public class StackedEntity extends Stack<EntityStackSettings> implements Compara
         // EnderDragonChangePhaseEvents is called when reading the entity NBT data.
         // Since we usually do this async and the event isn't allowed to be async, Spigot throws a fit.
         // We switch over to a non-async thread specifically for ender dragons because of this.
-        if (!Bukkit.isPrimaryThread() && entity instanceof EnderDragon) {
-            ThreadUtils.runSync(task);
-        } else {
-            task.run();
-        }
+        RoseStacker.getInstance().getScheduler().runTaskAtEntity(entity, task);
     }
 
     /**
@@ -292,29 +288,14 @@ public class StackedEntity extends Stack<EntityStackSettings> implements Compara
         boolean async = SettingKey.ENTITY_DEATH_EVENT_RUN_ASYNC.get();
         Runnable mainTask = () -> {
             EntityDrops drops = calculator.get();
-
-            Runnable finishTask = () -> {
-                Location location = this.entity.getLocation();
-                RoseStacker.getInstance().getManager(StackManager.class).preStackItems(drops.getDrops(), location, false);
-                int finalDroppedExp = drops.getExperience();
-                if (SettingKey.ENTITY_DROP_ACCURATE_EXP.get() && finalDroppedExp > 0 && WorldGuardHook.testCanDropExperience(killer, location))
-                    StackerUtils.dropExperience(location, finalDroppedExp, finalDroppedExp, finalDroppedExp / 2);
-            };
-
-            if (!Bukkit.isPrimaryThread()) {
-                ThreadUtils.runSync(finishTask);
-            } else {
-                finishTask.run();
-            }
+            Location location = this.entity.getLocation();
+            RoseStacker.getInstance().getManager(StackManager.class).preStackItems(drops.getDrops(), location, false);
+            int finalDroppedExp = drops.getExperience();
+            if (SettingKey.ENTITY_DROP_ACCURATE_EXP.get() && finalDroppedExp > 0 && WorldGuardHook.testCanDropExperience(killer, location))
+                StackerUtils.dropExperience(location, finalDroppedExp, finalDroppedExp, finalDroppedExp / 2);
         };
 
-        if (async && Bukkit.isPrimaryThread()) {
-            ThreadUtils.runAsync(mainTask);
-        } else if (!async && !Bukkit.isPrimaryThread()) {
-            ThreadUtils.runSync(mainTask);
-        } else {
-            mainTask.run();
-        }
+        RoseStacker.getInstance().getScheduler().runTaskAtLocation(getLocation(), mainTask);
     }
 
     /**

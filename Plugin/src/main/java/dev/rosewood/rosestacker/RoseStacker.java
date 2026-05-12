@@ -27,10 +27,10 @@ import dev.rosewood.rosestacker.manager.StackManager;
 import dev.rosewood.rosestacker.manager.StackSettingManager;
 import dev.rosewood.rosestacker.nms.NMSAdapter;
 import dev.rosewood.rosestacker.utils.StackerUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
-import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
+
+import java.util.List;
 
 /**
  * @author Esophose
@@ -90,7 +90,7 @@ public class RoseStacker extends RosePlugin {
             new RoseStackerPlaceholderExpansion(this).register();
 
         // Try to hook with ShopGuiPlus and skyblock plugins
-        ThreadUtils.runSync(() -> {
+        getScheduler().runTask(() -> {
             if (Bukkit.getPluginManager().isPluginEnabled("ShopGUIPlus"))
                 ShopGuiPlusHook.setupSpawners(this);
 

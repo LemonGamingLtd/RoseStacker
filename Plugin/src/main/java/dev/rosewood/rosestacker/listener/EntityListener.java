@@ -21,13 +21,7 @@ import dev.rosewood.rosestacker.stack.settings.SpawnerStackSettings;
 import dev.rosewood.rosestacker.utils.EntityUtils;
 import dev.rosewood.rosestacker.utils.ItemUtils;
 import dev.rosewood.rosestacker.utils.PersistentDataUtils;
-import dev.rosewood.rosestacker.utils.ThreadUtils;
 import dev.rosewood.rosestacker.utils.VersionUtils;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
@@ -76,6 +70,12 @@ import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class EntityListener implements Listener {
 
@@ -147,11 +147,7 @@ public class EntityListener implements Listener {
         };
 
         // Delay stacking by 1 tick for spawn eggs due to an egg duplication issue
-        if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
-            ThreadUtils.runSync(task);
-        } else {
-            task.run();
-        }
+        this.rosePlugin.getScheduler().runTaskAtLocationLater(entity.getLocation(), task, 1L);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -403,11 +399,7 @@ public class EntityListener implements Listener {
                 stackedEntity.getEntity().setVelocity(previousVelocity);
         };
 
-        if (SettingKey.ENTITY_KILL_DELAY_NEXT_SPAWN.get()) {
-            ThreadUtils.runSync(task);
-        } else {
-            task.run();
-        }
+        this.rosePlugin.getScheduler().runTaskAtLocationLater(entity.getLocation(), task, 1L);
 
         if (SettingKey.ENTITY_KILL_TRANSFER_VELOCITY.get())
             entity.setVelocity(new Vector());
@@ -471,7 +463,7 @@ public class EntityListener implements Listener {
             }
 
             event.getEntity().remove();
-            ThreadUtils.runSync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtLocationLater(transformedEntity.getLocation(), () -> {
                 this.stackManager.setEntityStackingTemporarilyDisabled(true);
                 LivingEntity newEntity = serialized.createEntity(transformedEntity.getLocation(), true, transformedEntity.getType());
                 if (aiDisabled)
@@ -492,7 +484,7 @@ public class EntityListener implements Listener {
                     newStack.increaseStackSize(entity, false);
                 });
                 newStack.updateDisplay();
-            });
+            }, 1L);
         } else {
             // Make sure disabled AI and from spawner properties get transferred
             if (aiDisabled)
@@ -500,11 +492,11 @@ public class EntityListener implements Listener {
             if (fromSpawner)
                 event.getTransformedEntities().stream().map(x -> (LivingEntity) x).forEach(newStackSettings::applySpawnerSpawnedProperties);
 
-            if (event.getTransformReason() == TransformReason.LIGHTNING) { // Wait for lightning to disappear
-                ThreadUtils.runSyncDelayed(stackedEntity::decreaseStackSize, 20);
-            } else {
-                ThreadUtils.runSync(stackedEntity::decreaseStackSize);
-            }
+            this.rosePlugin.getScheduler().runTaskAtLocationLater(
+                stackedEntity.getLocation(),
+                stackedEntity::decreaseStackSize,
+                event.getTransformReason() == TransformReason.LIGHTNING ? 20L : 1L
+            );
         }
     }
 
@@ -612,7 +604,7 @@ public class EntityListener implements Listener {
             return;
 
         if (stackedEntity.getStackSize() == 1) {
-            ThreadUtils.runAsync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), () -> {
                 stackedEntity.resetHasMoved();
                 this.stackManager.tryStackEntity(stackedEntity);
             });
@@ -620,7 +612,7 @@ public class EntityListener implements Listener {
         }
 
         if (!stackedEntity.getStackSettings().getSettingValue(EntityStackSettings.SHEEP_SHEAR_ALL_SHEEP_IN_STACK).getBoolean()) {
-            ThreadUtils.runSync(() -> {
+            this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), () -> {
                 if (!stackedEntity.shouldStayStacked())
                     this.stackManager.splitEntityStack(stackedEntity);
             });
@@ -630,7 +622,7 @@ public class EntityListener implements Listener {
         ShearedHandler shearedHandler = CompatibilityAdapter.getShearedHandler();
         List<ItemStack> drops = new ArrayList<>();
         this.stackManager.setEntityUnstackingTemporarilyDisabled(true);
-        ThreadUtils.runAsync(() -> {
+        this.rosePlugin.getScheduler().runTaskAsync(() -> {
             try {
                 stackedEntity.getDataStorage().forEachTransforming(internal -> {
                     Sheep sheep = (Sheep) internal;
@@ -644,7 +636,7 @@ public class EntityListener implements Listener {
 
                 Location location = sheepEntity.getLocation();
                 location.add(0, sheepEntity.getEyeHeight(), 0);
-                ThreadUtils.runSync(() -> this.stackManager.preStackItems(drops, location, false));
+                this.rosePlugin.getScheduler().runTaskAtLocation(location, () -> this.stackManager.preStackItems(drops, location, false));
             } finally {
                 this.stackManager.setEntityUnstackingTemporarilyDisabled(false);
             }
@@ -684,7 +676,7 @@ public class EntityListener implements Listener {
             return;
 
         AtomicInteger regrowRemaining = new AtomicInteger(regrowAmount);
-        ThreadUtils.runAsync(() -> stackedEntity.getDataStorage().forEachTransforming(internal -> {
+        this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), () -> stackedEntity.getDataStorage().forEachTransforming(internal -> {
             Sheep sheep = (Sheep) internal;
             if (shearedHandler.isSheared(sheep) && regrowRemaining.getAndDecrement() > 0) {
                 shearedHandler.setSheared(sheep, false);

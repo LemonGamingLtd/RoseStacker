@@ -5,6 +5,11 @@ import dev.rosewood.rosegarden.scheduler.RoseScheduler;
 import dev.rosewood.rosestacker.RoseStacker;
 import org.bukkit.Bukkit;
 
+/**
+ * This class is deprecated and should not be used. It will be removed in a future update.
+ * Use {@link RoseScheduler} instead.
+ */
+@Deprecated
 public final class ThreadUtils {
 
     private static final RosePlugin PLUGIN = RoseStacker.getInstance();
