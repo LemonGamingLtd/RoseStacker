@@ -25,6 +25,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        mavenLocal()
 
         maven { url = 'https://repo.rosewooddev.io/repository/public/' }
         maven { url = 'https://libraries.minecraft.net' }
@@ -43,16 +44,9 @@ allprojects {
         maven { url = 'https://nexus.neetgames.com/repository/maven-releases/' }
         maven { url = 'https://jitpack.io' }
 
-        //maven {
-        //    url = 'https://repo.rosewooddev.io/repository/maven-public'
-        //    credentials {
-        //        username project.mavenUser
-        //        password project.mavenPassword
-        //        authentication {
-        //            basic(BasicAuthentication)
-        //        }
-        //    }
-        //}
+        maven {
+            url = 'https://repo.rosewooddev.io/repository/public/'
+        }
     }
 
     dependencies {

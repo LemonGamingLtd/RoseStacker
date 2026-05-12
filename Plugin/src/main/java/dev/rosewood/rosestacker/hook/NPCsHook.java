@@ -1,15 +1,10 @@
 package dev.rosewood.rosestacker.hook;
 
-import com.magmaguy.elitemobs.entitytracker.EntityTracker;
-import com.nisovin.shopkeepers.api.ShopkeepersAPI;
-import com.songoda.epicbosses.EpicBosses;
-import de.Keyle.MyPet.api.entity.MyPetBukkitEntity;
 import dev.rosewood.rosegarden.utils.StringPlaceholders;
 import dev.rosewood.rosestacker.config.SettingKey;
 import io.hotmail.com.jacob_vejvoda.infernal_mobs.infernal_mobs;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import net.bestemor.villagermarket.VillagerMarketAPI;
-import net.citizensnpcs.api.CitizensAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
@@ -188,20 +183,8 @@ public class NPCsHook {
     public static boolean isNPC(LivingEntity entity) {
         boolean npc = false;
 
-        if (citizensEnabled() && CitizensAPI.hasImplementation())
-            npc = CitizensAPI.getNPCRegistry().isNPC(entity);
-
-        if (!npc && shopkeepersEnabled() && ShopkeepersAPI.isEnabled())
-            npc = ShopkeepersAPI.getShopkeeperRegistry().isShopkeeper(entity);
-
-        if (!npc && mythicMobsEnabled() && !SettingKey.MISC_MYTHICMOBS_ALLOW_STACKING.get())
+        if (mythicMobsEnabled() && !SettingKey.MISC_MYTHICMOBS_ALLOW_STACKING.get())
             npc = MythicBukkit.inst().getAPIHelper().isMythicMob(entity);
-
-        if (!npc && epicBossesEnabled())
-            npc = EpicBosses.getInstance().getBossEntityManager().getActiveBossHolder(entity) != null;
-
-        if (!npc && eliteMobsEnabled())
-            npc = EntityTracker.isEliteMob(entity) && EntityTracker.isNPCEntity(entity);
 
         if (!npc && bossEnabled())
             npc = entity.hasMetadata("Boss_V4");
@@ -222,9 +205,6 @@ public class NPCsHook {
 
         if (!npc && villagerMarketEnabled())
             npc = VillagerMarketAPI.getShopManager().isShop(entity);
-
-        if (!npc && mypetEnabled())
-            npc = entity instanceof MyPetBukkitEntity;
 
         return npc;
     }

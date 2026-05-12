@@ -185,7 +185,7 @@ public class StackingThread implements StackingLogic, AutoCloseable {
         this.unstackingEntities = true;
         try {
             for (StackedEntity stackedEntity : this.stackedEntities.values())
-                this.tryUnstackEntity(stackedEntity);
+                this.rosePlugin.getScheduler().runTaskAtEntity(stackedEntity.getEntity(), () -> this.tryUnstackEntity(stackedEntity));
         } finally {
             this.unstackingEntities = false;
         }
@@ -248,15 +248,17 @@ public class StackingThread implements StackingLogic, AutoCloseable {
         try {
             for (StackedItem stackedItem : this.stackedItems.values()) {
                 Item item = stackedItem.getItem();
-                if (item == null || this.isRemoved(item)) {
-                    this.removeItemStack(stackedItem);
-                    continue;
-                }
+                this.rosePlugin.getScheduler().runTaskAtEntity(item, () -> {
+                    if (item == null || this.isRemoved(item)) {
+                        this.removeItemStack(stackedItem);
+                        return;
+                    }
 
-                if (updateItemNametags)
-                    stackedItem.updateDisplay();
+                    if (updateItemNametags)
+                        stackedItem.updateDisplay();
 
-                this.tryStackItem(stackedItem);
+                    this.tryStackItem(stackedItem);
+                });
             }
         } finally {
             this.stackingItems = false;
@@ -313,33 +315,32 @@ public class StackingThread implements StackingLogic, AutoCloseable {
                         if (distanceSqrd > StackerUtils.ASSUMED_ENTITY_VISIBILITY_RANGE)
                             continue;
 
-                        boolean visible = distanceSqrd < this.entityDynamicViewRangeSqrd;
-                        if (this.entityDynamicWallDetection)
-                            visible &= EntityUtils.hasLineOfSight(player, entity, 0.75, true);
+                        this.rosePlugin.getScheduler().runTaskAtEntity(player, () -> {
+                            boolean visible = distanceSqrd < this.entityDynamicViewRangeSqrd;
+                            if (this.entityDynamicWallDetection)
+                                visible &= EntityUtils.hasLineOfSight(player, entity, 0.75, true);
 
-                        StackedEntity stackedEntity = this.getStackedEntity(entity);
-                        if (stackedEntity != null)
-                            nmsHandler.updateEntityNameTagForPlayer(player, entity, stackedEntity.getDisplayName(), stackedEntity.isDisplayNameVisible() && visible);
+                            StackedEntity stackedEntity = this.getStackedEntity(entity);
+                            if (stackedEntity != null)
+                                nmsHandler.updateEntityNameTagForPlayer(player, entity, stackedEntity.getDisplayName(), stackedEntity.isDisplayNameVisible() && visible);
 
-                        // Spawn particles for holding the stacking tool
-                        if (visible && displayStackingToolParticles) {
-                            Location location = entity.getLocation().add(0, entity.getEyeHeight(true) + 0.75, 0);
-                            DustOptions dustOptions;
-                            if (PersistentDataUtils.isUnstackable(entity)) {
-                                dustOptions = StackerUtils.UNSTACKABLE_DUST_OPTIONS;
-                            } else {
-                                dustOptions = StackerUtils.STACKABLE_DUST_OPTIONS;
+                            // Spawn particles for holding the stacking tool
+                            if (visible && displayStackingToolParticles) {
+                                Location location = entity.getLocation().add(0, entity.getEyeHeight(true) + 0.75, 0);
+                                DustOptions dustOptions;
+                                if (PersistentDataUtils.isUnstackable(entity)) {
+                                    dustOptions = StackerUtils.UNSTACKABLE_DUST_OPTIONS;
+                                } else {
+                                    dustOptions = StackerUtils.STACKABLE_DUST_OPTIONS;
+                                }
+                                player.spawnParticle(VersionUtils.DUST, location, 1, 0.0, 0.0, 0.0, 0.0, dustOptions);
                             }
-                            player.spawnParticle(VersionUtils.DUST, location, 1, 0.0, 0.0, 0.0, 0.0, dustOptions);
-                        }
+                        });
                     }
                 }
 
                 if (this.dynamicItemTags) {
                     for (Item item : items) {
-                        if (!item.isCustomNameVisible())
-                            continue;
-
                         double distanceSqrd;
                         try { // The locations can end up comparing cross-world if the player/entity switches worlds mid-loop due to being async
                             distanceSqrd = player.getLocation().distanceSquared(item.getLocation());
@@ -350,11 +351,16 @@ public class StackingThread implements StackingLogic, AutoCloseable {
                         if (distanceSqrd > StackerUtils.ASSUMED_ENTITY_VISIBILITY_RANGE)
                             continue;
 
-                        boolean visible = distanceSqrd < this.itemDynamicViewRangeSqrd;
-                        if (this.itemDynamicWallDetection)
-                            visible &= EntityUtils.hasLineOfSight(player, item, 0.75, true);
+                        this.rosePlugin.getScheduler().runTaskAtEntity(player, () -> {
+                            if (!item.isCustomNameVisible())
+                                return;
 
-                        nmsHandler.updateEntityNameTagVisibilityForPlayer(player, item, visible);
+                            boolean visible = distanceSqrd < this.itemDynamicViewRangeSqrd;
+                            if (this.itemDynamicWallDetection)
+                                visible &= EntityUtils.hasLineOfSight(player, item, 0.75, true);
+
+                            nmsHandler.updateEntityNameTagVisibilityForPlayer(player, item, visible);
+                        });
                     }
                 }
             }
@@ -1057,84 +1063,86 @@ public class StackingThread implements StackingLogic, AutoCloseable {
         if (stackSettings == null)
             return;
 
-        if (stackedEntity.checkNPC())
-            return;
-
         LivingEntity entity = stackedEntity.getEntity();
         if (this.isRemoved(entity) || !stackedEntity.hasMoved())
             return;
 
-        if (!WorldGuardHook.testLocation(entity.getLocation()))
-            return;
+        this.rosePlugin.getScheduler().runTaskAtEntity(entity, () -> {
+            if (stackedEntity.checkNPC())
+                return;
 
-        Collection<Entity> nearbyEntities;
-        Predicate<Entity> predicate = x -> x.getType() == entity.getType();
-        if (!SettingKey.ENTITY_MERGE_ENTIRE_CHUNK.get()) {
-            nearbyEntities = this.entityCacheManager.getNearbyEntities(entity.getLocation(), stackSettings.getMergeRadius(), predicate);
-        } else {
-            nearbyEntities = this.entityCacheManager.getEntitiesInChunk(entity.getLocation(), predicate);
-        }
+            if (!WorldGuardHook.testLocation(entity.getLocation()))
+                return;
 
-        Set<StackedEntity> targetEntities = new HashSet<>();
-        targetEntities.add(stackedEntity);
+            Collection<Entity> nearbyEntities;
+            Predicate<Entity> predicate = x -> x.getType() == entity.getType();
+            if (!SettingKey.ENTITY_MERGE_ENTIRE_CHUNK.get()) {
+                nearbyEntities = this.entityCacheManager.getNearbyEntities(entity.getLocation(), stackSettings.getMergeRadius(), predicate);
+            } else {
+                nearbyEntities = this.entityCacheManager.getEntitiesInChunk(entity.getLocation(), predicate);
+            }
 
-        for (Entity otherEntity : nearbyEntities) {
-            if (entity == otherEntity || this.isRemoved(otherEntity))
-                continue;
+            Set<StackedEntity> targetEntities = new HashSet<>();
+            targetEntities.add(stackedEntity);
 
-            StackedEntity other = this.stackedEntities.get(otherEntity.getUniqueId());
-            if (other == null)
-                continue;
+            for (Entity otherEntity : nearbyEntities) {
+                if (entity == otherEntity || this.isRemoved(otherEntity))
+                    continue;
 
-            if (stackSettings.testCanStackWith(stackedEntity, other, false)
+                StackedEntity other = this.stackedEntities.get(otherEntity.getUniqueId());
+                if (other == null)
+                    continue;
+
+                if (stackSettings.testCanStackWith(stackedEntity, other, false)
                     && (!SettingKey.ENTITY_REQUIRE_LINE_OF_SIGHT.get() || EntityUtils.hasLineOfSight(entity, otherEntity, 0.75, false))
                     && WorldGuardHook.testLocation(otherEntity.getLocation()))
-                targetEntities.add(other);
-        }
+                    targetEntities.add(other);
+            }
 
-        StackedEntity increased;
-        int totalSize;
-        List<StackedEntity> removable = new ArrayList<>(targetEntities.size());
-        if (!SettingKey.ENTITY_MIN_STACK_COUNT_ONLY_INDIVIDUALS.get()) {
-            increased = targetEntities.stream().max(StackedEntity::compareTo).orElse(stackedEntity);
-            targetEntities.remove(increased);
-            totalSize = increased.getStackSize();
-            for (StackedEntity target : targetEntities) {
-                if (totalSize + target.getStackSize() <= stackSettings.getMaxStackSize()) {
-                    totalSize += target.getStackSize();
-                    removable.add(target);
+            StackedEntity increased;
+            int totalSize;
+            List<StackedEntity> removable = new ArrayList<>(targetEntities.size());
+            if (!SettingKey.ENTITY_MIN_STACK_COUNT_ONLY_INDIVIDUALS.get()) {
+                increased = targetEntities.stream().max(StackedEntity::compareTo).orElse(stackedEntity);
+                targetEntities.remove(increased);
+                totalSize = increased.getStackSize();
+                for (StackedEntity target : targetEntities) {
+                    if (totalSize + target.getStackSize() <= stackSettings.getMaxStackSize()) {
+                        totalSize += target.getStackSize();
+                        removable.add(target);
+                    }
+                }
+            } else {
+                increased = stackedEntity;
+                targetEntities.remove(increased);
+                totalSize = 1;
+                int totalStackSize = increased.getStackSize();
+                for (StackedEntity target : targetEntities) {
+                    if (totalStackSize + target.getStackSize() <= stackSettings.getMaxStackSize()) {
+                        totalSize++;
+                        totalStackSize += target.getStackSize();
+                        removable.add(target);
+                    }
                 }
             }
-        } else {
-            increased = stackedEntity;
-            targetEntities.remove(increased);
-            totalSize = 1;
-            int totalStackSize = increased.getStackSize();
-            for (StackedEntity target : targetEntities) {
-                if (totalStackSize + target.getStackSize() <= stackSettings.getMaxStackSize()) {
-                    totalSize++;
-                    totalStackSize += target.getStackSize();
-                    removable.add(target);
-                }
+
+            if (removable.isEmpty() || totalSize < stackSettings.getMinStackSize())
+                return;
+
+            EntityStackEvent entityStackEvent = new EntityStackEvent(removable, increased);
+            Bukkit.getPluginManager().callEvent(entityStackEvent);
+            if (entityStackEvent.isCancelled())
+                return;
+
+            for (StackedEntity toStack : removable) {
+                stackSettings.applyStackProperties(toStack.getEntity(), increased.getEntity());
+                increased.increaseStackSize(toStack.getEntity());
+                increased.increaseStackSize(toStack.getDataStorage());
+                this.removeEntityStack(toStack);
             }
-        }
 
-        if (removable.isEmpty() || totalSize < stackSettings.getMinStackSize())
-            return;
-
-        EntityStackEvent entityStackEvent = new EntityStackEvent(removable, increased);
-        Bukkit.getPluginManager().callEvent(entityStackEvent);
-        if (entityStackEvent.isCancelled())
-            return;
-
-        for (StackedEntity toStack : removable) {
-            stackSettings.applyStackProperties(toStack.getEntity(), increased.getEntity());
-            increased.increaseStackSize(toStack.getEntity());
-            increased.increaseStackSize(toStack.getDataStorage());
-            this.removeEntityStack(toStack);
-        }
-
-        removable.stream().map(StackedEntity::getEntity).forEach(livingEntity -> this.rosePlugin.getScheduler().runTaskAtEntity(livingEntity, livingEntity::remove));
+            removable.stream().map(StackedEntity::getEntity).forEach(livingEntity -> this.rosePlugin.getScheduler().runTaskAtEntity(livingEntity, livingEntity::remove));
+        });
     }
 
     @Override
